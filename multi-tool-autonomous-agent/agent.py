@@ -38,7 +38,32 @@ tools = [
 
 
 # --------------------------------------------------
-# 2. Create the language model
+# 2. Format model and tool output
+# --------------------------------------------------
+
+def format_content(content):
+    """Convert model or tool output into readable text."""
+
+    if isinstance(content, str):
+        return content
+
+    if isinstance(content, list):
+        parts = []
+
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+
+            elif isinstance(item, dict) and "text" in item:
+                parts.append(item["text"])
+
+        return "\n".join(parts) if parts else str(content)
+
+    return str(content)
+
+
+# --------------------------------------------------
+# 3. Create the language model and agent
 # --------------------------------------------------
 
 def create_research_agent():
@@ -53,10 +78,6 @@ def create_research_agent():
         model="gemini-3.5-flash-lite",
         max_retries=3,
     )
-
-    # --------------------------------------------------
-    # 3. Connect the model to the tools
-    # --------------------------------------------------
 
     agent = create_agent(
         model=llm,
@@ -75,7 +96,10 @@ def create_research_agent():
            calculations, or local file contents are needed.
         3. For multi-step tasks, use multiple tools when appropriate.
         4. Base your final answer on the actual tool results.
-        5. Present a clear, concise final answer.
+        5. Present a clear, concise, well-formatted final answer.
+        6. Use headings or bullet points when they improve readability.
+        7. Preserve URLs returned by web search accurately.
+        8. Never claim a tool succeeded if it returned an error.
         """
     )
 
@@ -87,27 +111,51 @@ def create_research_agent():
 # --------------------------------------------------
 
 if __name__ == "__main__":
-    agent = create_research_agent()
+    try:
+        agent = create_research_agent()
 
-    question = input("Enter your question: ")
+        question = input("Enter your question: ").strip()
 
-    response = agent.invoke({
-        "messages": [
-            {"role": "user", "content": question}
-        ]
-    })
+        if not question:
+            print("Please enter a question.")
+            raise SystemExit(1)
 
-    print("\n--- Tool Execution Trace ---")
+        response = agent.invoke({
+            "messages": [
+                {"role": "user", "content": question}
+            ]
+        })
 
-    for message in response["messages"]:
-        if getattr(message, "tool_calls", None):
-            for call in message.tool_calls:
-                print(f"Action: {call['name']}")
-                print(f"Input: {call['args']}")
+        print("\n" + "=" * 50)
+        print("TOOL EXECUTION TRACE")
+        print("=" * 50)
 
-        elif getattr(message, "type", "") == "tool":
-            print(f"Observation: {message.content}")
+        for message in response["messages"]:
 
-    print("\n--- Final Answer ---")
-    print(response["messages"][-1].content)
+            # Display tool calls made by the model.
+            if getattr(message, "tool_calls", None):
+                for call in message.tool_calls:
+                    print(f"\nAction: {call['name']}")
+                    print(f"Input: {call['args']}")
 
+            # Display the results returned by tools.
+            elif getattr(message, "type", "") == "tool":
+                print(
+                    f"\nObservation:\n"
+                    f"{format_content(message.content)}"
+                )
+
+        print("\n" + "=" * 50)
+        print("FINAL ANSWER")
+        print("=" * 50)
+
+        final_content = response["messages"][-1].content
+        print(format_content(final_content))
+
+        print("\n" + "=" * 50)
+
+    except KeyboardInterrupt:
+        print("\nAgent execution cancelled by user.")
+
+    except Exception as error:
+        print(f"\nAn error occurred: {error}")
