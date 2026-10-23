@@ -1,22 +1,23 @@
 # Multi-Tool Autonomous AI Agent
 
-A Python-based autonomous AI agent built with LangChain and Google's Gemini models. The agent uses web search, mathematical calculations, and local file reading to solve research questions and multi-step tasks.
+A Python-based AI agent built with LangChain and Google's Gemini models. The agent uses web search, mathematical calculations, and local file reading to solve research questions and multi-step tasks.
 
 ## Overview
 
-This project demonstrates how an AI agent can select and execute tools based on a user's request rather than relying solely on its language model.
+This project demonstrates how an AI agent can select and execute tools based on a user's request instead of relying solely on its language model.
 
-The agent can combine multiple tools in a single workflow, observe their results, and generate a consolidated final answer.
+The agent can combine multiple tools in a single workflow, inspect their outputs, handle tool errors, and generate a consolidated final answer.
 
 ## Features
 
 - **Web Search:** Retrieve relevant web results using DuckDuckGo.
 - **Python Calculator:** Evaluate mathematical expressions using a restricted Python AST evaluator without using `eval()`.
 - **Local File Reader:** Read supported text, Markdown, and CSV files within the designated workspace.
-- **Autonomous Tool Selection:** Choose suitable tools according to the user's request.
-- **Multi-Step Execution:** Combine multiple tools to complete compound tasks.
-- **Execution Trace:** Display tool actions, inputs, observations, and the final answer.
-- **Automated Tests:** Validate calculator behavior, error handling, file reading, and workspace access restrictions.
+- **Autonomous Tool Selection:** Select suitable tools based on the task.
+- **Multi-Step Execution:** Combine multiple tools to complete compound requests.
+- **Execution Trace:** Display tool calls, inputs, observations, and the final answer.
+- **Error Handling:** Report tool errors while allowing the agent to continue with other steps when possible.
+- **Automated Tests:** Test calculator operations, unsupported expressions, file reading, and workspace access restrictions.
 
 ## Tech Stack
 
@@ -51,13 +52,13 @@ git clone https://github.com/engy-salem/Multi_Tool_Autonomous_AI_Agent.git
 cd Multi_Tool_Autonomous_AI_Agent
 ```
 
-### 2. Install dependencies
+### 2. Create a virtual environment
 
 ```bash
 python -m venv .venv
 ```
 
-Activate the environment, then install the required packages.
+Activate the environment.
 
 **Windows PowerShell:**
 
@@ -71,6 +72,8 @@ Activate the environment, then install the required packages.
 source .venv/bin/activate
 ```
 
+Install the dependencies:
+
 ```bash
 python -m pip install -r requirements.txt
 ```
@@ -79,7 +82,7 @@ python -m pip install -r requirements.txt
 
 Create an API key through [Google AI Studio](https://aistudio.google.com/).
 
-Set it as an environment variable instead of hardcoding it in the source code.
+Set the key as an environment variable.
 
 **Windows PowerShell:**
 
@@ -93,27 +96,34 @@ $env:GOOGLE_API_KEY="YOUR_API_KEY"
 export GOOGLE_API_KEY="YOUR_API_KEY"
 ```
 
-Never commit your real API key to GitHub.
+Replace `YOUR_API_KEY` with your actual key. Never hardcode your API key in source files or commit it to GitHub.
 
 ### 4. Run the agent
 
-From the repository root:
+From the repository root, execute:
 
 ```bash
 python multi-tool-autonomous-agent/agent.py
 ```
 
-Enter a question when prompted.
+Enter your task when prompted.
 
 ## Example Task
 
 ```text
-Read project_notes.txt, calculate 2026 - 2024,
-and search the web for the official Python website.
-Summarize the results from all three tools.
+Read project_notes.txt and summarize its main purpose.
+Calculate (125 * 8) + (2026 - 2024).
+Search the web for the official Python downloads page.
+Combine the results under clear headings.
 ```
 
-The agent can use the file reader, calculator, and web search tools to complete the request.
+For this task, the agent can use:
+
+1. **File Reader** to retrieve information from `project_notes.txt`.
+2. **Calculator** to evaluate the mathematical expression.
+3. **Web Search** to retrieve relevant search results.
+
+The agent then combines the tool outputs into a single response.
 
 ## Running Tests
 
@@ -123,18 +133,25 @@ Run the automated tests from the repository root:
 python -m pytest tests/test_tools.py -v
 ```
 
-The current test suite includes five tests covering calculator operations, rejection of unsupported expressions, local file reading, and workspace access restrictions.
+The current test suite contains five tests covering:
+
+- Calculator multiplication and subtraction.
+- Rejection of unsupported calculator expressions.
+- Reading the project notes file.
+- Blocking file access outside the designated workspace.
+
+All five tests passed in the latest test run. These tests validate the covered tool functions and file-access restrictions; they do not establish the accuracy of every web search result or test every possible agent workflow.
 
 ## Security Considerations
 
-- The calculator restricts the types of Python expressions it evaluates.
+- The calculator uses a restricted AST evaluator to reject unsupported expressions.
 - The file reader limits access to the designated workspace and supported file types.
-- API credentials should be supplied through environment variables or a secret manager.
-- Web search results should be verified when accuracy is important.
+- API credentials should be provided through environment variables or a secret manager.
+- Web search results should be checked against reliable sources when accuracy is important.
 
 ## Future Improvements
 
 - Expand automated tests for agent behavior and tool integration.
 - Improve final-answer formatting and error handling.
 - Add support for additional tools.
-- Evaluate performance on a collection of multi-step research tasks.
+- Evaluate performance across a collection of multi-step research tasks.
