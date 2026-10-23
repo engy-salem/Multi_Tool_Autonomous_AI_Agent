@@ -51,13 +51,13 @@ git clone https://github.com/engy-salem/Multi_Tool_Autonomous_AI_Agent.git
 cd Multi_Tool_Autonomous_AI_Agent
 ```
 
-### 2. Create a virtual environment
+### 2. Install dependencies
 
 ```bash
 python -m venv .venv
 ```
 
-Activate it before installing dependencies.
+Activate the environment, then install the required packages.
 
 **Windows PowerShell:**
 
@@ -71,8 +71,6 @@ Activate it before installing dependencies.
 source .venv/bin/activate
 ```
 
-Install the required packages:
-
 ```bash
 python -m pip install -r requirements.txt
 ```
@@ -81,7 +79,7 @@ python -m pip install -r requirements.txt
 
 Create an API key through [Google AI Studio](https://aistudio.google.com/).
 
-Set the key as an environment variable. Never hardcode your real API key in source code or commit it to GitHub.
+Set it as an environment variable instead of hardcoding it in the source code.
 
 **Windows PowerShell:**
 
@@ -95,17 +93,17 @@ $env:GOOGLE_API_KEY="YOUR_API_KEY"
 export GOOGLE_API_KEY="YOUR_API_KEY"
 ```
 
-Replace `YOUR_API_KEY` with your actual key locally. Do not include the real key in this README.
+Never commit your real API key to GitHub.
 
 ### 4. Run the agent
 
-From the repository root, run:
+From the repository root:
 
 ```bash
 python multi-tool-autonomous-agent/agent.py
 ```
 
-Enter a research question when prompted.
+Enter a question when prompted.
 
 ## Example Task
 
@@ -115,12 +113,7 @@ and search the web for the official Python website.
 Summarize the results from all three tools.
 ```
 
-For this request, the agent can:
-
-1. Read the project notes using the file reader.
-2. Calculate the difference using the calculator.
-3. Search for the official Python website.
-4. Combine the observations into a final response.
+The agent can use the file reader, calculator, and web search tools to complete the request.
 
 ## Running Tests
 
@@ -130,23 +123,18 @@ Run the automated tests from the repository root:
 python -m pytest tests/test_tools.py -v
 ```
 
-The current test suite covers:
-
-- Calculator multiplication and subtraction.
-- Rejection of unsupported calculator expressions.
-- Reading the project notes.
-- Blocking attempts to access files outside the workspace.
+The current test suite includes five tests covering calculator operations, rejection of unsupported expressions, local file reading, and workspace access restrictions.
 
 ## Security Considerations
 
-- The calculator uses a restricted AST evaluator instead of executing arbitrary Python expressions.
-- The file reader restricts supported file types and prevents path traversal outside the workspace.
-- API credentials should be stored in environment variables or a secret manager.
-- Web search results may be incomplete or inaccurate and should be verified when necessary.
+- The calculator restricts the types of Python expressions it evaluates.
+- The file reader limits access to the designated workspace and supported file types.
+- API credentials should be supplied through environment variables or a secret manager.
+- Web search results should be verified when accuracy is important.
 
 ## Future Improvements
 
 - Expand automated tests for agent behavior and tool integration.
 - Improve final-answer formatting and error handling.
-- Add more tools and research capabilities.
-- Evaluate the agent on a broader collection of multi-step tasks.
+- Add support for additional tools.
+- Evaluate performance on a collection of multi-step research tasks.
