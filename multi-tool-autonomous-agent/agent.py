@@ -14,14 +14,16 @@ from rich.text import Text
 from tools import web_search, calculate, read_local_file
 
 
+# Initialize the console
 console = Console()
 
+# Match URLs in tool results
 URL_PATTERN = re.compile(r"https?://[^\s\]\)<>\"']+")
 
 
-# --------------------------------------------------
-# 1. Register the tools
-# --------------------------------------------------
+# -----------------------------
+# 1. Define the agent tools
+# -----------------------------
 
 @tool
 def web_search_tool(query: str) -> str:
@@ -48,12 +50,12 @@ tools = [
 ]
 
 
-# --------------------------------------------------
-# 2. Normalize content and extract real source URLs
-# --------------------------------------------------
+# -----------------------------
+# 2. Format the content
+# -----------------------------
 
 def format_content(content):
-    """Convert model or tool output into readable text."""
+    """Convert the agent response into readable text."""
 
     if isinstance(content, str):
         return content.strip()
@@ -73,8 +75,12 @@ def format_content(content):
     return str(content).strip()
 
 
+# -----------------------------
+# 3. Extract source URLs
+# -----------------------------
+
 def extract_urls(text):
-    """Extract unique URLs from actual tool results."""
+    """Extract unique URLs from text."""
 
     urls = URL_PATTERN.findall(text)
     cleaned_urls = []
@@ -82,44 +88,43 @@ def extract_urls(text):
     for url in urls:
         url = url.rstrip(".,;:")
 
-        if url not in cleaned_urls:
+        if url and url not in cleaned_urls:
             cleaned_urls.append(url)
 
     return cleaned_urls
 
 
-def add_sources(final_answer, source_urls):
-    """Always append source URLs returned by web search."""
+def collect_source_urls(messages):
+    """Collect URLs from tool results and the final answer."""
 
-    if not source_urls:
-        return (
-            final_answer.rstrip()
-            + "\n\n### Sources\n"
-            + "No source URLs were returned by the search tool."
-        )
+    source_urls = []
 
-    source_lines = ["### Sources", ""]
+    for message in messages:
+        # Collect URLs from tool observations
+        if getattr(message, "type", "") == "tool":
+            observation = format_content(message.content)
+            source_urls.extend(extract_urls(observation))
 
-    for url in source_urls:
-        source_lines.append(f"- {url}")
+    # Also check the final answer for any URLs
+    if messages:
+        final_answer = format_content(messages[-1].content)
+        source_urls.extend(extract_urls(final_answer))
 
-    return (
-        final_answer.rstrip()
-        + "\n\n"
-        + "\n".join(source_lines)
-    )
+    # Remove duplicates while preserving order
+    return list(dict.fromkeys(source_urls))
 
 
-# --------------------------------------------------
-# 3. Create the agent
-# --------------------------------------------------
+# -----------------------------
+# 4. Create the research agent
+# -----------------------------
 
 def create_research_agent():
-    """Create and return the multi-tool AI agent."""
+    """Initialize the Gemini model and autonomous agent."""
 
     if not os.environ.get("GOOGLE_API_KEY"):
         raise EnvironmentError(
-            "GOOGLE_API_KEY is missing. Set it as an environment variable."
+            "GOOGLE_API_KEY is missing. "
+            "Set it as an environment variable."
         )
 
     llm = ChatGoogleGenerativeAI(
@@ -127,62 +132,110 @@ def create_research_agent():
         max_retries=3,
     )
 
-    return create_agent(
+    agent = create_agent(
         model=llm,
         tools=tools,
         system_prompt="""
-        You are a helpful autonomous research assistant.
+You are a helpful autonomous research assistant.
 
-        Available tools:
-        - web_search_tool: Search the internet.
-        - calculator_tool: Perform safe mathematical calculations.
-        - file_reader_tool: Read files from the project workspace.
+Available tools:
+- web_search_tool: Search the internet for information.
+- calculator_tool: Perform safe mathematical calculations.
+- file_reader_tool: Read files from the project workspace.
 
-        Instructions:
-        1. Select tools appropriate to the user's request.
-        2. Use tools for external information, calculations, and file contents.
-        3. Use multiple tools for compound tasks when appropriate.
-        4. Base answers on actual tool results.
-        5. Format the answer with Markdown headings and bullet points.
-        6. Include relevant source titles and exact URLs from web search.
-        7. Never invent URLs, facts, or sources.
-        8. Never claim a tool succeeded if it returned an error.
-        9. Keep the answer clear, concise, and organized.
-        """
+Instructions:
+1. Select the appropriate tools for the user's request.
+2. Use tools for external information, calculations, and file contents.
+3. Use multiple tools for compound tasks when appropriate.
+4. Base your answers on actual tool results.
+5. Organize answers using Markdown headings and bullet points.
+6. Include relevant source titles and exact URLs from search results.
+7. Never invent URLs, facts, calculations, or sources.
+8. Never claim a tool succeeded if it returned an error.
+9. If a tool returns an error, explain the problem clearly.
+10. Keep answers clear, concise, and organized.
+""",
     )
 
+    return agent
 
-# --------------------------------------------------
-# 4. Run the agent
-# --------------------------------------------------
+
+# -----------------------------
+# 5. Display source URLs
+# -----------------------------
+
+def display_sources(source_urls):
+    """Display source URLs separately as clickable terminal links."""
+
+    console.print()
+    console.print(
+        Panel(
+            "Links extracted from the tool results",
+            title="Sources",
+            border_style="cyan",
+        )
+    )
+
+    if not source_urls:
+        console.print(
+            "[yellow]No source URLs were found in the results.[/yellow]"
+        )
+        return
+
+    for index, url in enumerate(source_urls, start=1):
+        # Use Text instead of parsing the URL as Rich markup
+        link_text = Text(f"{index}. {url}")
+        link_text.stylize(f"link {url}", len(f"{index}. "), len(f"{index}. {url}"))
+        console.print(link_text)
+
+
+# -----------------------------
+# 6. Run the agent
+# -----------------------------
 
 if __name__ == "__main__":
     try:
         agent = create_research_agent()
 
+        console.print(
+            Panel(
+                "Ask a question that may require research, "
+                "calculations, or reading a local file.",
+                title="Multi-Tool Autonomous AI Agent",
+                border_style="cyan",
+            )
+        )
+
         question = console.input(
-            "[bold cyan]Enter your question:[/bold cyan] "
+            "\n[bold cyan]Enter your question:[/bold cyan] "
         ).strip()
 
         if not question:
-            console.print("[bold red]Please enter a question.[/bold red]")
+            console.print(
+                "[bold red]Please enter a question.[/bold red]"
+            )
             raise SystemExit(1)
 
-        response = agent.invoke({
-            "messages": [
-                {"role": "user", "content": question}
-            ]
-        })
+        # Invoke the agent
+        response = agent.invoke(
+            {
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": question,
+                    }
+                ]
+            }
+        )
 
         messages = response["messages"]
-        source_urls = []
-        tool_observations = []
 
-        # Collect tool calls and their actual results.
+        # Display the execution trace
         console.print()
+
         console.print(
             Panel(
-                "Tool calls and results",
+                "Tools selected and their returned results",
                 title="Execution Trace",
                 border_style="cyan",
             )
@@ -190,45 +243,50 @@ if __name__ == "__main__":
 
         for message in messages:
 
+            # Display tool calls and their inputs
             if getattr(message, "tool_calls", None):
                 for call in message.tool_calls:
                     console.print(
-                        f"\n[bold yellow]Action:[/bold yellow] {call['name']}"
-                    )
-                    console.print(
-                        Text(f"Input: {call['args']}")
+                        f"\n[bold yellow]Action:[/bold yellow] "
+                        f"{call['name']}"
                     )
 
+                    console.print(
+                        Text(
+                            f"Input: {call.get('args', {})}"
+                        )
+                    )
+
+            # Display tool results
             elif getattr(message, "type", "") == "tool":
                 observation = format_content(message.content)
-                tool_observations.append(observation)
 
-                # Display observations as plain text to avoid
-                # interpreting their content as Rich markup.
-                console.print("\n[bold green]Observation:[/bold green]")
+                console.print(
+                    "\n[bold green]Observation:[/bold green]"
+                )
+
                 console.print(Text(observation))
 
-                # Extract URLs only from actual tool observations.
-                source_urls.extend(extract_urls(observation))
-
-        # Remove duplicate source URLs while preserving order.
-        source_urls = list(dict.fromkeys(source_urls))
-
-        # Format the model's final answer.
+        # Get the final answer
         final_answer = format_content(messages[-1].content)
 
-        # Append real search-result URLs independently of the model.
-        final_answer = add_sources(final_answer, source_urls)
+        # Collect URLs independently of the model's final wording
+        source_urls = collect_source_urls(messages)
 
+        # Display the final answer
         console.print()
+
         console.print(
             Panel(
-                Markdown(final_answer),
+                Markdown(final_answer or "The agent returned an empty answer."),
                 title="Final Answer",
                 border_style="green",
                 padding=(1, 2),
             )
         )
+
+        # Always display the collected URLs separately
+        display_sources(source_urls)
 
     except KeyboardInterrupt:
         console.print(
