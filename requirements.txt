@@ -1,1 +1,7 @@
 
+langchain
+langchain-google-genai
+ddgs
+python-dotenv
+pytest
+
