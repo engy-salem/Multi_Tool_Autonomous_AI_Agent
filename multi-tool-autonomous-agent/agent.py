@@ -96,10 +96,14 @@ def create_research_agent():
            calculations, or local file contents are needed.
         3. For multi-step tasks, use multiple tools when appropriate.
         4. Base your final answer on the actual tool results.
-        5. Present a clear, concise, well-formatted final answer.
-        6. Use headings or bullet points when they improve readability.
-        7. Preserve URLs returned by web search accurately.
-        8. Never claim a tool succeeded if it returned an error.
+        5. Present a clear, concise final answer using Markdown.
+        6. Use headings, bullet points, and numbered lists when useful.
+        7. When using web search results, include relevant source titles
+           and their exact URLs in the final answer.
+        8. Distinguish retrieved information from assumptions.
+        9. Never claim a tool succeeded if it returned an error.
+        10. Never invent URLs, facts, or sources.
+        11. Avoid unnecessary repetition and keep the answer readable.
         """
     )
 
@@ -126,33 +130,31 @@ if __name__ == "__main__":
             ]
         })
 
-        print("\n" + "=" * 50)
+        # Display tool execution trace.
+        print("\n" + "=" * 60)
         print("TOOL EXECUTION TRACE")
-        print("=" * 50)
+        print("=" * 60)
 
         for message in response["messages"]:
 
-            # Display tool calls made by the model.
             if getattr(message, "tool_calls", None):
                 for call in message.tool_calls:
                     print(f"\nAction: {call['name']}")
                     print(f"Input: {call['args']}")
 
-            # Display the results returned by tools.
             elif getattr(message, "type", "") == "tool":
-                print(
-                    f"\nObservation:\n"
-                    f"{format_content(message.content)}"
-                )
+                print("\nObservation:")
+                print(format_content(message.content))
 
-        print("\n" + "=" * 50)
+        # Display final answer.
+        print("\n" + "=" * 60)
         print("FINAL ANSWER")
-        print("=" * 50)
+        print("=" * 60)
 
         final_content = response["messages"][-1].content
         print(format_content(final_content))
 
-        print("\n" + "=" * 50)
+        print("\n" + "=" * 60)
 
     except KeyboardInterrupt:
         print("\nAgent execution cancelled by user.")
