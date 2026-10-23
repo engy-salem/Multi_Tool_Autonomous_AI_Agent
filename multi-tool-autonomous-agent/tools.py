@@ -8,7 +8,7 @@ from ddgs import DDGS
 
 
 # Project workspace: files the agent is allowed to read
-WORKSPACE = Path(__file__).resolve().parent / "workspace"
+WORKSPACE = Path(__file__).resolve().parent.parent / "workspace"
 WORKSPACE.mkdir(parents=True, exist_ok=True)
 
 
