@@ -5,7 +5,14 @@ from langchain.agents import create_agent
 from langchain.tools import tool
 from langchain_google_genai import ChatGoogleGenerativeAI
 
+from rich.console import Console
+from rich.markdown import Markdown
+from rich.panel import Panel
+
 from tools import web_search, calculate, read_local_file
+
+
+console = Console()
 
 
 # --------------------------------------------------
@@ -63,7 +70,7 @@ def format_content(content):
 
 
 # --------------------------------------------------
-# 3. Create the language model and agent
+# 3. Create the agent
 # --------------------------------------------------
 
 def create_research_agent():
@@ -91,19 +98,16 @@ def create_research_agent():
         - file_reader_tool: Read files from the project workspace.
 
         Instructions:
-        1. Select the appropriate tool based on the user's request.
+        1. Choose tools appropriate to the user's request.
         2. Use tools instead of guessing when external information,
            calculations, or local file contents are needed.
         3. For multi-step tasks, use multiple tools when appropriate.
-        4. Base your final answer on the actual tool results.
-        5. Present a clear, concise final answer using Markdown.
-        6. Use headings, bullet points, and numbered lists when useful.
-        7. When using web search results, include relevant source titles
-           and their exact URLs in the final answer.
-        8. Distinguish retrieved information from assumptions.
-        9. Never claim a tool succeeded if it returned an error.
-        10. Never invent URLs, facts, or sources.
-        11. Avoid unnecessary repetition and keep the answer readable.
+        4. Base your final answer on actual tool results.
+        5. Use clear Markdown headings and bullet points.
+        6. Include relevant source titles and exact URLs from search results.
+        7. Never invent facts, URLs, or sources.
+        8. Never claim a tool succeeded if it returned an error.
+        9. Keep the final answer concise and readable.
         """
     )
 
@@ -118,10 +122,12 @@ if __name__ == "__main__":
     try:
         agent = create_research_agent()
 
-        question = input("Enter your question: ").strip()
+        question = console.input(
+            "[bold cyan]Enter your question:[/bold cyan] "
+        ).strip()
 
         if not question:
-            print("Please enter a question.")
+            console.print("[bold red]Please enter a question.[/bold red]")
             raise SystemExit(1)
 
         response = agent.invoke({
@@ -131,33 +137,49 @@ if __name__ == "__main__":
         })
 
         # Display tool execution trace.
-        print("\n" + "=" * 60)
-        print("TOOL EXECUTION TRACE")
-        print("=" * 60)
+        console.print()
+        console.print(
+            Panel(
+                "[bold]Tool calls and results[/bold]",
+                border_style="cyan",
+                expand=False,
+            )
+        )
 
         for message in response["messages"]:
 
             if getattr(message, "tool_calls", None):
                 for call in message.tool_calls:
-                    print(f"\nAction: {call['name']}")
-                    print(f"Input: {call['args']}")
+                    console.print(
+                        f"\n[bold yellow]Action:[/bold yellow] {call['name']}"
+                    )
+                    console.print(
+                        f"[bold]Input:[/bold] {call['args']}"
+                    )
 
             elif getattr(message, "type", "") == "tool":
-                print("\nObservation:")
-                print(format_content(message.content))
+                console.print("[bold green]Observation:[/bold green]")
+                console.print(format_content(message.content))
 
-        # Display final answer.
-        print("\n" + "=" * 60)
-        print("FINAL ANSWER")
-        print("=" * 60)
+        # Display the final answer as rendered Markdown.
+        final_content = format_content(
+            response["messages"][-1].content
+        )
 
-        final_content = response["messages"][-1].content
-        print(format_content(final_content))
-
-        print("\n" + "=" * 60)
+        console.print()
+        console.print(
+            Panel(
+                Markdown(final_content),
+                title="[bold green]Final Answer[/bold green]",
+                border_style="green",
+                padding=(1, 2),
+            )
+        )
 
     except KeyboardInterrupt:
-        print("\nAgent execution cancelled by user.")
+        console.print("\n[yellow]Agent execution cancelled by user.[/yellow]")
 
     except Exception as error:
-        print(f"\nAn error occurred: {error}")
+        console.print(
+            f"\n[bold red]An error occurred:[/bold red] {error}"
+        )
