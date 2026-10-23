@@ -48,11 +48,12 @@ tools = [
 # 2. Format model and tool output
 # --------------------------------------------------
 
+
 def format_content(content):
     """Convert model or tool output into readable text."""
 
     if isinstance(content, str):
-        return content
+        return content.strip()
 
     if isinstance(content, list):
         parts = []
@@ -64,9 +65,10 @@ def format_content(content):
             elif isinstance(item, dict) and "text" in item:
                 parts.append(item["text"])
 
-        return "\n".join(parts) if parts else str(content)
+        return "\n".join(parts).strip()
 
-    return str(content)
+    return str(content).strip()
+
 
 
 # --------------------------------------------------
