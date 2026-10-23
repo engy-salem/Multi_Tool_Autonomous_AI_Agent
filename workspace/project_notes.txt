@@ -1,1 +1,12 @@
 
+Project: Multi-Tool Autonomous AI Agent
+
+Tools:
+- Web search
+- Python calculator
+- Local file reader
+
+Goal:
+Build an agent that can use multiple tools
+to solve compound research questions.
+
