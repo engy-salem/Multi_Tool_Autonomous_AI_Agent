@@ -64,21 +64,30 @@ def format_content(content):
 # 3. Extract URLs from text
 # --------------------------------
 
+
 def extract_urls(text):
-    # Find URLs in plain text and Markdown links
-    pattern = r"https?://[^\s<>\"']+"
-    matches = re.findall(pattern, text)
+    # Extract the actual destination from Markdown links first
+    markdown_links = re.findall(
+        r"\[[^\]]*\]\((https?://[^)\s]+)\)",
+        text,
+    )
+
+    # Extract regular URLs as well
+    plain_urls = re.findall(
+        r"https?://[^\s<>\[\]()\"']+",
+        text,
+    )
 
     urls = []
 
-    for url in matches:
-        # Remove Markdown and sentence punctuation from the end
-        url = url.rstrip(".,;:!?)]}")
+    for url in markdown_links + plain_urls:
+        url = url.rstrip(".,;:!?")
 
-        if url and url not in urls:
+        if url not in urls:
             urls.append(url)
 
     return urls
+
 
 
 # --------------------------------
